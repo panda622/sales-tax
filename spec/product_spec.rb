@@ -1,6 +1,8 @@
 require 'spec_helper'
 require_relative '../product'
 
+require 'pry'
+
 RSpec.describe Product do
   let(:quantity) { 2 }
   let(:name) { 'Harry Potter Book' }
@@ -60,13 +62,19 @@ RSpec.describe Product do
     end
   end
 
-  describe '#tax_type' do
+  describe '#tax_value' do
     context 'when is a imported product' do
       name_imported = 'Harry potter book imported from viet nam'
       subject { described_class.new(quantity, name_imported, price) }
 
       it 'should return true' do
-        expect(subject.tax_type).to eq(0.05)
+        expect(subject.tax_value).to eq(5)
+      end
+
+      it 'tax for music cd' do
+        import = 'music cd import'
+        product = Product.new(1, import, price)
+        expect(product.tax_value).to eq(15)
       end
     end
 
@@ -75,13 +83,13 @@ RSpec.describe Product do
       subject { described_class.new(quantity,local_product, price) }
 
       it 'no tax for local food' do
-        expect(subject.tax_type).to eq(0)
+        expect(subject.tax_value).to eq(0)
       end
 
       it 'tax for music cd' do
         local_product = 'music cd'
         subject { described_class.new(quantity,local_product, price) }
-        expect(subject.tax_type).to eq(0.1)
+        expect(subject.tax_value).to eq(10)
       end
     end
   end
@@ -89,10 +97,10 @@ RSpec.describe Product do
   describe '#calculate_price_after_tax' do
     context 'local un-exempt tax product' do
       music_cd = 'music cd'
-      subject { described_class.new(quantity, music_cd, 14.99) }
+      product = Product.new(1, music_cd, 14.99)
 
       it 'should return 16.49' do
-        expect(subject.calculate_price_after_tax).to eq(16.49)
+        expect(product.calculate_price_after_tax).to eq("16.49")
       end
     end
 
@@ -100,17 +108,23 @@ RSpec.describe Product do
       book = 'Harry potter book'
       subject { described_class.new(quantity, book, 12.49) }
 
-      it 'should return 16.49' do
-        expect(subject.calculate_price_after_tax).to eq(12.49)
+      it 'should unchange' do
+        expect(subject.calculate_price_after_tax).to eq("12.49")
       end
     end
 
     context 'imported product' do
       choco = ' box of imported chocolates'
-      subject { described_class.new(quantity, choco, 11.25) }
+      product = Product.new(1, choco, 11.25)
 
-      it 'should return 11.85' do
-        expect(subject.calculate_price_after_tax).to eq(11.81)
+      it 'with additional exotic tax' do
+        expect(product.calculate_price_after_tax).to eq("11.80")
+      end
+
+      it 'with additional exotic tax and 10% tax' do
+        choco = 'imported bottle of perfume'
+        product = Product.new(1, choco, 27.99)
+        expect(product.calculate_price_after_tax).to eq("32.19")
       end
     end
   end

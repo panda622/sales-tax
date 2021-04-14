@@ -5,9 +5,9 @@ class Product
 
   @@all = []
 
-  EXEMPT_PRODUCTS = %w(bottle book food medical pill chocolate)
-  IMPORT_PRODUCT_TAX = 0.05
-  REGULAR_TAX = 0.1
+  EXEMPT_PRODUCTS = %w(book food medical pill chocolate chocolates)
+  IMPORT_PRODUCT_TAX = 5
+  REGULAR_TAX = 10
   NO_TAX = 0
 
   def initialize(quantity, name, price)
@@ -33,41 +33,55 @@ class Product
     def export_csv(file_path)
       CSV.open('output.csv', 'wb') do |csv|
         all.each do |product|
-          csv << [product.quantity, product.name, product.calculate_price_after_tax]
+          csv << [product.quantity, product.name, product.calculate_price_after_tax.to_f]
           csv << []
         end
 
-        csv << ["Sales Taxes: #{all.inject(0) { |sum, product| sum + product.tax_price }}"]
+        csv << ["Sales Taxes: #{sales_taxes}"]
 
         csv << []
-        csv << ["Total: #{all.inject(0) { |sum, product| sum + product.calculate_price_after_tax }}"]
+        csv << ["Total: #{total}"]
       end
+    end
+
+    def total
+      '%.2f' % all.inject(0) { |sum, product| sum + product.calculate_price_after_tax.to_f }
+    end
+
+    def sales_taxes
+      '%.2f' % all.inject(0) { |sum, product| sum + product.tax_price }
     end
   end
 
   def tax_price
-    return price * IMPORT_PRODUCT_TAX if imported_product?
+    return 0 if tax_value == NO_TAX
 
-    EXEMPT_PRODUCTS.each { |p| return NO_TAX if name.downcase.include?(p) }
-
-    REGULAR_TAX * price
+    after_tax = price * tax_value / 100
+    ((after_tax * 20).round / 20.0) * quantity
   end
 
-  def tax_type
-    return IMPORT_PRODUCT_TAX if imported_product?
+  def tax_value
+    return IMPORT_PRODUCT_TAX if imported_product? && exempt_tax?
 
-    EXEMPT_PRODUCTS.each { |p| return NO_TAX if name.downcase.include?(p) }
+    return IMPORT_PRODUCT_TAX + REGULAR_TAX if imported_product? && !exempt_tax?
+
+    return NO_TAX if exempt_tax?
 
     REGULAR_TAX
   end
 
   def calculate_price_after_tax
-    return price if tax_type == NO_TAX
-
-    (tax_price + price).round(2)
+    '%.2f' % (tax_price + price)
   end
 
   def imported_product?
     name.downcase.include?('import') || name.downcase.include?('imported')
+  end
+
+  private
+
+  def exempt_tax?
+    EXEMPT_PRODUCTS.each { |p| return true if name.downcase.include?(p) }
+    false
   end
 end
